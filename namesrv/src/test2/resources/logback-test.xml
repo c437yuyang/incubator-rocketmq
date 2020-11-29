@@ -18,20 +18,16 @@
 
 <configuration>
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <!--encoder 默认配置为PatternLayoutEncoder-->
+    <appender name="DefaultAppender" class="ch.qos.logback.core.ConsoleAppender">
+        <append>true</append>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{TRACE_ID}] [%thread] %-5level %logger{50} - %msg%n</pattern>
-            <charset>utf-8</charset>
+            <pattern>%d{yyy-MM-dd HH\:mm\:ss,GMT+8} %p %t - %m%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
         </encoder>
-        <!--此日志appender是为开发使用，只配置最底级别，控制台输出的日志级别是大于或等于此级别的日志信息-->
-        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>info</level>
-        </filter>
     </appender>
 
     <root>
         <level value="INFO"/>
-        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="DefaultAppender"/>
     </root>
 </configuration>

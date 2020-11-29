@@ -61,6 +61,7 @@ public class AllocateMessageQueueAveragelyByCircle implements AllocateMessageQue
                 result.add(mqAll.get(i));
             }
         }
+        System.out.println("[AllocateMessageQueueAveragelyByCircle] cid index: " + index + " ,queue:" + result);
         return result;
     }
 

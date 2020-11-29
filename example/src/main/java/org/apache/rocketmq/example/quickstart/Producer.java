@@ -16,11 +16,14 @@
  */
 package org.apache.rocketmq.example.quickstart;
 
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
+
+import java.util.Random;
 
 /**
  * This class demonstrates how to send messages to brokers using provided {@link DefaultMQProducer}.
@@ -31,7 +34,7 @@ public class Producer {
         /*
          * Instantiate with a producer group name.
          */
-        DefaultMQProducer producer = new DefaultMQProducer("please_rename_unique_group_name");
+        DefaultMQProducer producer = new DefaultMQProducer("demo_producer1");
 
         producer.setNamesrvAddr("127.0.0.1:9876"); // TODO add by yunai
 //        producer.setSendLatencyFaultEnable(true);
@@ -54,21 +57,16 @@ public class Producer {
 
 //        Thread.sleep(10000000L);
 
-        String body = "";
-        for (int i = 0; i < 10 * 1024; i++) {
-            body += "" + i;
-        }
-
         for (int i = 0; i < Integer.MAX_VALUE; i++) {
             try {
-
+                String body =  "test msg body " + i;
                 /*
                  * Create a message instance, specifying topic, tag and message body.
                  */
 
                 Message msg = new Message("TopicTest_mis" /* Topic */,
-                    "TagA" /* Tag */,
-                    (body).getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
+                        "TagA" /* Tag */,
+                        (body).getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
                 );
 
                 /*
@@ -80,7 +78,9 @@ public class Producer {
 
 
                 System.out.printf("%s%n", sendResult);
-                break;
+                if (i > 0) {
+                    break;
+                }
 //                System.out.println(i);
 //                if (i % 10000 == 0) {
 //                    System.out.println("sendOneway：" + i);

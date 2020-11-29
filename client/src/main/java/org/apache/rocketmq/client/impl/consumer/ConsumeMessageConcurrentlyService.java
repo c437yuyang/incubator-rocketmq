@@ -354,7 +354,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             case CLUSTERING:
                 // 发回消息失败到Broker。
                 List<MessageExt> msgBackFailed = new ArrayList<>(consumeRequest.getMsgs().size());
-                for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++) {
+                for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++) { // 包括ackIndex在内的index是消费成功的
                     MessageExt msg = consumeRequest.getMsgs().get(i);
                     boolean result = this.sendMessageBack(msg, context);
                     if (!result) {

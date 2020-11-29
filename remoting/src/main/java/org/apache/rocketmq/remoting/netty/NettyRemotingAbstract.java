@@ -53,7 +53,7 @@ public abstract class NettyRemotingAbstract {
     protected final Semaphore semaphoreOneway;
 
     protected final Semaphore semaphoreAsync;
-
+    /* 保存请求码与响应关联映射 */
     protected final ConcurrentHashMap<Integer /* opaque */, ResponseFuture> responseTable =
         new ConcurrentHashMap<Integer, ResponseFuture>(256);
 
@@ -91,6 +91,7 @@ public abstract class NettyRemotingAbstract {
     }
 
     public void processRequestCommand(final ChannelHandlerContext ctx, final RemotingCommand cmd) {
+        //根据RemotingCommand中的code获取processor和ExecutorService
         final Pair<NettyRequestProcessor, ExecutorService> matched = this.processorTable.get(cmd.getCode());
         final Pair<NettyRequestProcessor, ExecutorService> pair = null == matched ? this.defaultRequestProcessor : matched;
         final int opaque = cmd.getOpaque();
@@ -104,7 +105,7 @@ public abstract class NettyRemotingAbstract {
                         if (rpcHook != null) {
                             rpcHook.doBeforeRequest(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd);
                         }
-
+                        // 这里就是调用实际的具体code对应的业务处理了
                         final RemotingCommand response = pair.getObject1().processRequest(ctx, cmd);
                         if (rpcHook != null) {
                             rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd, response);
@@ -151,7 +152,9 @@ public abstract class NettyRemotingAbstract {
             }
 
             try {
+                // 封装requestTask
                 final RequestTask requestTask = new RequestTask(run, ctx.channel(), cmd);
+                // 向线程池提交requestTask
                 pair.getObject2().submit(requestTask);
             } catch (RejectedExecutionException e) {
                 if ((System.currentTimeMillis() % 10000) == 0) {
@@ -182,12 +185,13 @@ public abstract class NettyRemotingAbstract {
         final int opaque = cmd.getOpaque();
         final ResponseFuture responseFuture = responseTable.get(opaque);
         if (responseFuture != null) {
+            // 释放对应的请求
             responseFuture.setResponseCommand(cmd);
 
             responseFuture.release();
 
             responseTable.remove(opaque);
-
+            // 执行回调方法
             if (responseFuture.getInvokeCallback() != null) {
                 executeInvokeCallback(responseFuture);
             } else {
@@ -235,14 +239,19 @@ public abstract class NettyRemotingAbstract {
     public abstract RPCHook getRPCHook();
 
     abstract public ExecutorService getCallbackExecutor();
-
+    /*
+    * 在发送消息时候，如果遇到异常情况（比如服务端没有response返回给客户端或者response因网络而丢失），
+    * 上面所述的responseTable的本地缓存Map将会出现堆积情况。这个时候需要一个定时任务来专门做responseTable的清理回收。
+    * 在RocketMQ的客户端/服务端启动时候会产生一个频率为1s调用一次来的定时任务检查所有的responseTable缓存中的responseFuture变量，
+    * 判断是否已经得到返回, 并进行相应的处理。(可以看Client在start的时候，启动了一个定时线程)
+    * */
     public void scanResponseTable() {
         final List<ResponseFuture> rfList = new LinkedList<ResponseFuture>();
         Iterator<Entry<Integer, ResponseFuture>> it = this.responseTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<Integer, ResponseFuture> next = it.next();
             ResponseFuture rep = next.getValue();
-
+            // 可以看到是大于超时时间1s后，就会直接释放掉
             if ((rep.getBeginTimestamp() + rep.getTimeoutMillis() + 1000) <= System.currentTimeMillis()) {
                 rep.release();
                 it.remove();
@@ -304,18 +313,23 @@ public abstract class NettyRemotingAbstract {
     public void invokeAsyncImpl(final Channel channel, final RemotingCommand request, final long timeoutMillis,
         final InvokeCallback invokeCallback)
         throws InterruptedException, RemotingTooMuchRequestException, RemotingTimeoutException, RemotingSendRequestException {
+        //相当于request ID, RemotingCommand会为每一个request产生一个request ID, 从0开始, 每次加1
         final int opaque = request.getOpaque();
         boolean acquired = this.semaphoreAsync.tryAcquire(timeoutMillis, TimeUnit.MILLISECONDS);
         if (acquired) {
             final SemaphoreReleaseOnlyOnce once = new SemaphoreReleaseOnlyOnce(this.semaphoreAsync);
-
+            //根据request ID构建ResponseFuture，这里最重要的是把传进来的callback存起来了，根据opaque作为关联，当成功后来Invoke这个回调
             final ResponseFuture responseFuture = new ResponseFuture(opaque, timeoutMillis, invokeCallback, once);
+            //将ResponseFuture放入responseTable
             this.responseTable.put(opaque, responseFuture);
             try {
+                //使用Netty的channel发送请求数据
                 channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
+                    //消息发送后执行
                     @Override
                     public void operationComplete(ChannelFuture f) throws Exception {
                         if (f.isSuccess()) {
+                            //如果发送消息成功给Server，那么这里直接Set后return
                             responseFuture.setSendRequestOK(true);
                             return;
                         } else {
@@ -325,10 +339,12 @@ public abstract class NettyRemotingAbstract {
                         responseFuture.putResponse(null);
                         responseTable.remove(opaque);
                         try {
+                            //执行回调
                             executeInvokeCallback(responseFuture);
                         } catch (Throwable e) {
                             PLOG.warn("excute callback in writeAndFlush addListener, and callback throw", e);
                         } finally {
+                            //释放信号量
                             responseFuture.release();
                         }
 
@@ -336,6 +352,7 @@ public abstract class NettyRemotingAbstract {
                     }
                 });
             } catch (Exception e) {
+                //异常处理
                 responseFuture.release();
                 PLOG.warn("send a request command to channel <" + RemotingHelper.parseChannelRemoteAddr(channel) + "> Exception", e);
                 throw new RemotingSendRequestException(RemotingHelper.parseChannelRemoteAddr(channel), e);

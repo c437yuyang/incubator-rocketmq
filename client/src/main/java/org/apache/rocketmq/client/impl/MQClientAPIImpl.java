@@ -334,11 +334,16 @@ public class MQClientAPIImpl {
     ) throws InterruptedException, RemotingException {
         this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
             @Override
+            // 这里是复写了NettyRemotingAbstract提供的方法，父类默认的就是直接执行回调，这里是新增了一些异常处理和返回值处理
             public void operationComplete(ResponseFuture responseFuture) {
+                // 先从Server端返回的responseFuture变量中获取RemotingCommand的值
                 RemotingCommand response = responseFuture.getResponseCommand();
                 if (null == sendCallback && response != null) {
 
                     try {
+                        // Client端处理发送消息的Response返回（包括对消息返回体的头部进行解码，
+                        // 取得“topic”、“BrokerName”、“QueueId”等值）
+                        // 随后构建sendResult对象并设置Context上下文中
                         SendResult sendResult = MQClientAPIImpl.this.processSendResponse(brokerName, msg, response);
                         if (context != null && sendResult != null) {
                             context.setSendResult(sendResult);

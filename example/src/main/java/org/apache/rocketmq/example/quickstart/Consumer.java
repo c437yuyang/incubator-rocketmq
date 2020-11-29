@@ -22,6 +22,9 @@ import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.rmi.runtime.Log;
 
 import java.util.List;
 
@@ -29,13 +32,13 @@ import java.util.List;
  * This example shows how to subscribe and consume messages using providing {@link DefaultMQPushConsumer}.
  */
 public class Consumer {
-
+    private static Logger consumerLogger = LoggerFactory.getLogger(Consumer.class);
     public static void main(String[] args) throws InterruptedException, MQClientException {
 
         /*
          * Instantiate with specified consumer group name.
          */
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("please_rename_unique_group_name_4");
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("demo_consumer1");
         consumer.setConsumeThreadMin(1);
         consumer.setConsumeThreadMax(1);
 
@@ -66,6 +69,7 @@ public class Consumer {
 //        consumer.subscribe("TopicRead3", "*");
 //        consumer.subscribe("TopicTest", "*");
         consumer.subscribe("TopicTest_mis", "*");
+//        consumer.subscribe("TopicTest_mis", "a1||a2||a3");
 
         /*
          *  Register callback to execute on arrival of messages fetched from brokers.
@@ -75,8 +79,9 @@ public class Consumer {
             @Override
             public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
                 ConsumeConcurrentlyContext context) {
+//                context.setDelayLevelWhenNextConsume();
                 System.out.printf(Thread.currentThread().getName() + " Receive New Messages: " + msgs + "%n");
-                return ConsumeConcurrentlyStatus.RECONSUME_LATER;
+                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
 //                return ConsumeConcurrentlyStatus.RECONSUME_LATER;
             }
         });
@@ -85,7 +90,9 @@ public class Consumer {
          *  Launch the consumer instance.
          */
         consumer.start();
-
+        consumerLogger.debug("debug log");
+        consumerLogger.info("info log");
+        consumerLogger.warn("warn log");
         System.out.printf("Consumer Started.%n");
     }
 }
