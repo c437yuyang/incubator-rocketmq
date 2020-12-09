@@ -978,14 +978,14 @@ public class CommitLog {
                 long begin = System.currentTimeMillis();
                 if (begin >= (this.lastCommitTimestamp + commitDataThoroughInterval)) {
                     this.lastCommitTimestamp = begin;
-                    commitDataLeastPages = 0;
+                    commitDataLeastPages = 0; // 这里设0在里面有判断，=0就一定flush
                 }
 
                 try {
                     // commit
                     boolean result = CommitLog.this.mappedFileQueue.commit(commitDataLeastPages);
                     long end = System.currentTimeMillis();
-                    if (!result) { // TODO 疑问：未写入成功，为啥要唤醒flushCommitLogService
+                    if (!result) { // TODO 疑问：未写入成功，为啥要唤醒flushCommitLogService, 未写入成功，最好是用另一个线程尝试直接flush一次吧
                         this.lastCommitTimestamp = end; // result = false means some data committed.
                         //now wake up flush thread.
                         flushCommitLogService.wakeup();
@@ -1001,7 +1001,7 @@ public class CommitLog {
                     CommitLog.log.error(this.getServiceName() + " service has exception. ", e);
                 }
             }
-
+            // 这里已经是while循环结束了，因此这里就是程序退出的时候才会走到的
             boolean result = false;
             for (int i = 0; i < RETRY_TIMES_OVER && !result; i++) {
                 result = CommitLog.this.mappedFileQueue.commit(0);
@@ -1091,8 +1091,8 @@ public class CommitLog {
         }
 
         private void printFlushProgress() {
-            // CommitLog.log.info("how much disk fall behind memory, "
-            // + CommitLog.this.mappedFileQueue.howMuchFallBehind());
+             CommitLog.log.info("how much disk fall behind memory, "
+             + CommitLog.this.mappedFileQueue.howMuchFallBehind());
         }
 
         @Override

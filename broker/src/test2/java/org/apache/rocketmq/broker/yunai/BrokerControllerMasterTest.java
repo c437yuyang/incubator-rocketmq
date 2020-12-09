@@ -55,6 +55,7 @@ public class BrokerControllerMasterTest {
         brokerConfig.setBrokerName("broker-a");
         brokerConfig.setBrokerId(MixAll.MASTER_ID);
         brokerConfig.setNamesrvAddr("127.0.0.1:9876");
+        brokerConfig.setAutoCreateTopicEnable(true);
         //
         final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
         messageStoreConfig.setDeleteWhen("04");
