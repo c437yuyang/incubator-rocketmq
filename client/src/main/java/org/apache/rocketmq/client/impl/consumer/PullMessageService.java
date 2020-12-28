@@ -75,6 +75,7 @@ public class PullMessageService extends ServiceThread {
     public void executePullRequestImmediately(final PullRequest pullRequest) {
         try {
             this.pullRequestQueue.put(pullRequest);
+            log.warn("pullRequestQueue for pullRequest:{}, size:{}", pullRequest, pullRequestQueue.size());
         } catch (InterruptedException e) {
             log.error("executePullRequestImmediately pullRequestQueue.put", e);
         }

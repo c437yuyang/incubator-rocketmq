@@ -70,7 +70,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             case RequestCode.DELETE_KV_CONFIG:
                 return this.deleteKVConfig(ctx, request);
 
-            case RequestCode.REGISTER_BROKER: // 注册Broker
+            case RequestCode.REGISTER_BROKER: // 注册Broker，Broker心跳
                 Version brokerVersion = MQVersion.value2Version(request.getVersion());
                 if (brokerVersion.ordinal() >= MQVersion.Version.V3_0_11.ordinal()) {
                     return this.registerBrokerWithFilterServer(ctx, request);
@@ -79,9 +79,9 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 }
             case RequestCode.UNREGISTER_BROKER: // 移除注册Broker
                 return this.unregisterBroker(ctx, request);
-            case RequestCode.GET_ROUTEINTO_BY_TOPIC:
+            case RequestCode.GET_ROUTEINTO_BY_TOPIC: // client向 nameserver查询当前topic的路由信息
                 return this.getRouteInfoByTopic(ctx, request);
-            case RequestCode.GET_BROKER_CLUSTER_INFO:
+            case RequestCode.GET_BROKER_CLUSTER_INFO: // 下面这些很多都是tools里面，rocketmq-admin这个工具用到的
                 return this.getBrokerClusterInfo(ctx, request);
 
             case RequestCode.WIPE_WRITE_PERM_OF_BROKER:

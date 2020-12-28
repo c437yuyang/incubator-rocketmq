@@ -309,6 +309,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 if (pullResult != null) {
                     pullResult = DefaultMQPushConsumerImpl.this.pullAPIWrapper.processPullResult(pullRequest.getMessageQueue(), pullResult,
                         subscriptionData);
+                    log.info("pullResult:{} for request:{}, clientId:{}", pullResult, pullRequest, DefaultMQPushConsumerImpl.this.getmQClientFactory().getClientId());
 
                     switch (pullResult.getPullStatus()) {
                         case FOUND:
